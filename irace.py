@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import scipy.stats as stats
 import xgboost as xgb
 from sklearn.model_selection import GridSearchCV
 
@@ -13,7 +14,12 @@ def irace(X, y, stop_condition, parameters):
             grid_searches = [GridSearchCV(competitor, parameters, scoring='neg_mean_absolute_error', cv=5) for competitor in competitors]
             for grid_search in grid_searches:
                 grid_search.fit(X, y)
-            best = min(grid_searches, key=lambda grid_search: grid_search.best_score_)
+            scores = [grid_search.best_score_ for grid_search in grid_searches]
+            t, p = stats.ttest_rel(scores[0], scores[1])
+            if p <= 0.05:
+                best = grid_searches[np.argmin(scores)]
+            else:
+                best = random.choice(grid_searches)
             new_population.append(best.best_estimator_)
         population = new_population
         generation += 1
