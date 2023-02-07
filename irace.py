@@ -24,13 +24,14 @@ def irace(models, X, y, stop_condition, stat_test, parameters_dict):
             grid_searches = []
             for competitor in competitors:
                 parameters = parameters_dict[type(competitor).__name__]
-                grid_search = RandomizedSearchCV(competitor, parameters, scoring='neg_mean_absolute_error', cv=5)
+                grid_search = RandomizedSearchCV(competitor, parameters, scoring='f1', cv=10)
                 grid_search.fit(X, y)
                 grid_searches.append(grid_search)
-            scores = [grid_search.best_score_ for grid_search in grid_searches]
+            scores = [grid_search.cv_results_['mean_test_score'] for grid_search in grid_searches]
+            best_scores = [grid_search.best_score_ for grid_search in grid_searches]
             t, p = stat_test(scores[0], scores[1]) #stats.ttest_rel(scores[0], scores[1])
             if p <= 0.05:
-                best = grid_searches[np.argmin(scores)]
+                best = grid_searches[np.argmin(-np.array(best_scores))]
             else:
                 best = random.choice(grid_searches)
             new_population.append(best.best_estimator_)
@@ -50,9 +51,9 @@ if __name__ == '__main__':
     models = [LogisticRegression(), RandomForestClassifier(), XGBClassifier()]
    
     parameters_dict = {
-        'LogisticRegression': {'C': [0.1, 1, 10]},
-        'RandomForestClassifier': {'n_estimators': [10, 50, 100], 'max_depth': [None, 5, 10, 20]},
-        'XGBClassifier': {'n_estimators': [10, 50, 100], 'max_depth': [5, 10, 20]}
+        'LogisticRegression': {'C': [0.1, 0.5, 1, 10],'penalty':['l2'],'solver':['lbfgs','newton-cg','sag']},
+        'RandomForestClassifier': {'n_estimators': [10, 50, 100, 200], 'max_depth': [None, 5, 10, 20]},
+        'XGBClassifier': {'n_estimators': [5, 10, 50, 100], 'max_depth': [3, 5, 10, 20]}
     }
 
     # Possible tests
@@ -66,10 +67,18 @@ if __name__ == '__main__':
 
     best_model = irace(models, X, y, lambda x: x > 100, stat_test, parameters_dict)
 
-    #baselines
+    
+    print('============================================')
+    print('============================================')
+    print('============================================')
+    print('============================================')
+    print('============================================')
+    print('============================================')
+    print('============================================')
+    print('============================================')    
+    print('===============Baselines=============================')
 
     scores = cross_val_score(LogisticRegression(), X, y, cv=10, scoring='f1')
-   
     
     print('LR')
     print(f'{np.mean(scores)} +- {np.std(scores)}')
