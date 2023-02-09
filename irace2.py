@@ -12,29 +12,30 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 import statsmodels.stats.weightstats as stats
 import scipy.stats as ss
 from sklearn.model_selection import train_test_split,StratifiedShuffleSplit,cross_val_score
-from scipy.stats import norm
-from scipy.stats import poisson
+from scipy.stats import norm, poisson, skellam
+from copy import copy, deepcopy
 
-def irace(models, X, y, stop_condition, stat_test, parameters_dict, cv = 5, scoring='f1_macro'):
-    population = models
+def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size = 10, cv = 5, scoring='f1_macro'):
+    ''' Irace finds a population of models that maximizes the score given by the scoring function.
+    
+    '''
+    population = [deepcopy(r) for r in random.choices(models, k=pop_size)]
     generation = 0
-
     pop_scores = [cross_val_score(model, X, y, cv=cv, scoring=scoring) for model in population]
 
     while not stop_condition(generation):
         print(f'Gen {generation}\n')
         for i in range(len(population)):
             # Select competitor
-            competitor = random.sample(population, 1)[0]
+            competitor = deepcopy(random.sample(population, 1)[0])
             # Get the specific parameters for the competitor model
             parameters = parameters_dict[type(competitor).__name__]
             # Vary parameters
             for p in parameters:   
                 if isinstance(parameters[p],list):
-                    setattr(competitor,p,random.sample(parameters[p], 1)) 
+                    setattr(competitor,p,random.sample(parameters[p], 1)[0]) 
                 else:
-                    dist = parameters[p](getattr(competitor,p))
-                    setattr(competitor,p,dist.rvs(1))
+                    setattr(competitor,p,parameters[p](getattr(competitor,p)))
 
             scores = cross_val_score(competitor, X, y, cv=cv, scoring=scoring)
 
@@ -47,7 +48,23 @@ def irace(models, X, y, stop_condition, stat_test, parameters_dict, cv = 5, scor
                 population[i] = competitor
                 pop_scores[i] = scores
         generation += 1
-    return population
+    return population, pop_scores
+
+
+def norm_sample(loc, scale, min):
+    dist = norm(loc=loc, scale=scale)
+    sample = dist.rvs(1)[0] 
+    return sample if sample > min else min 
+
+def truncated_poisson(loc, mu, min):
+    #dist = poisson(mu=mu)
+    sample = poisson.rvs(mu=mu, loc=loc, size=1)[0] 
+    return sample if sample > min else min 
+
+def truncated_skellam(loc, mu1, mu2, min):
+    sample = skellam.rvs(mu1=mu1, mu2=mu2, loc=loc, size=1)[0] 
+    return sample if sample > min else min 
+
 
 
 if __name__ == '__main__':
@@ -58,11 +75,20 @@ if __name__ == '__main__':
 
     stop_condition = lambda generation: generation >= 10
 
-    models = [LogisticRegression(), RandomForestClassifier()]
+    #all the parameters being configures must be set beforehand
+    models = [LogisticRegression(C=1), 
+        RandomForestClassifier(n_estimators=100,max_depth=5),
+        XGBClassifier(n_estimators=100,max_depth=6)]
    
+
     parameters_dict = {
-        'LogisticRegression': {'C': lambda loc : norm(loc=loc, scale=1),'penalty':['l2'],'solver':['lbfgs','newton-cg','sag']},
-        'XGBClassifier': {'n_estimators': lambda mu: poisson(mu=mu), 'max_depth': lambda mu: poisson(mu=mu)}
+        'LogisticRegression': {'C': lambda loc : norm_sample(loc=loc, scale=1, min= 1e-2),
+                                'penalty':['l2'],
+                                'solver':['lbfgs','newton-cg','sag']},
+        'RandomForestClassifier': {'n_estimators': lambda loc: truncated_skellam(loc, mu1=10, mu2=10, min=1), 
+                                    'max_depth': lambda loc: truncated_skellam(loc, mu1=1, mu2=1, min=1)},
+        'XGBClassifier': {'sample_type': ['uniform','weighted'], 
+                            'max_depth': lambda loc: truncated_skellam(loc, mu1=1, mu2=1, min=1)}
     }
 
     # Possible tests
@@ -74,35 +100,18 @@ if __name__ == '__main__':
 
     stat_test = ss.ttest_rel #stats.ttest_ind, stats.mannwhitneyu
 
-    best_model = irace(models, X, y, lambda x: x > 100, stat_test, parameters_dict, cv = 10, scoring='f1_macro')
-
-    
-    print('============================================')
-    print('============================================')
-    print('============================================')
-    print('============================================')
-    print('============================================')
-    print('============================================')
-    print('============================================')
-    print('============================================')    
-    print('===============Baselines=============================')
+    pop, pop_scores = irace(models, X, y, lambda x: x > 500, stat_test, parameters_dict, pop_size = 15, cv = 10, scoring='f1_macro')
 
     scores = cross_val_score(LogisticRegression(), X, y, cv=10, scoring='f1')
-    
     print('LR')
     print(f'{np.mean(scores)} +- {np.std(scores)}')
 
-    scores = cross_val_score(RandomForestClassifier(), X, y, cv=10, scoring='f1')
-    
+    scores = cross_val_score(RandomForestClassifier(), X, y, cv=10, scoring='f1')    
     print('RF')
     print(f'{np.mean(scores)} +- {np.std(scores)}')
 
-    scores = cross_val_score(XGBClassifier(), X, y, cv=10, scoring='f1')
-    
-    #print('XGB')
-    #print(f'{np.mean(scores)} +- {np.std(scores)}')
 
-    print('best')
-    scores = cross_val_score(best_model, X, y, cv=10, scoring='f1')
-    print(best_model)
-    print(f'{np.mean(scores)} +- {np.std(scores)}')
+    print()
+    for i in range(len(pop)):
+        print(pop[i])
+        print(f'{np.mean(pop_scores[i])} +- {np.std(pop_scores[i])}')
