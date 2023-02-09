@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split,StratifiedShuffleSplit,cros
 from scipy.stats import norm, poisson, skellam
 from copy import copy, deepcopy
 
-def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, cv = 5, scoring='f1_macro'):
+def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, cv, scoring):
     ''' Irace finds a population of models that maximizes the score given by the scoring function.
     
     '''
