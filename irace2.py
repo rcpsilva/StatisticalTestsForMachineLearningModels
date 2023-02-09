@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split,StratifiedShuffleSplit,cros
 from scipy.stats import norm, poisson, skellam
 from copy import copy, deepcopy
 
-def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size = 10, cv = 5, scoring='f1_macro'):
+def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, cv = 5, scoring='f1_macro'):
     ''' Irace finds a population of models that maximizes the score given by the scoring function.
     
     '''
@@ -40,14 +40,11 @@ def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size = 1
             scores = cross_val_score(competitor, X, y, cv=cv, scoring=scoring)
 
             t, p = stat_test(pop_scores[i], scores) #stats.ttest_rel(scores[0], scores[1])
-            if p <= 0.05:
-                if np.mean(scores) > np.mean(pop_scores[i]):  
+            if p <= 0.05 and np.mean(scores) > np.mean(pop_scores[i]):  
                     population[i] = competitor
                     pop_scores[i] = scores
-            else:
-                population[i] = competitor
-                pop_scores[i] = scores
         generation += 1
+        print(f'Average scores: {np.mean([np.mean(scores) for scores in pop_scores])}')
     return population, pop_scores
 
 
@@ -100,7 +97,7 @@ if __name__ == '__main__':
 
     stat_test = ss.ttest_rel #stats.ttest_ind, stats.mannwhitneyu
 
-    pop, pop_scores = irace(models, X, y, lambda x: x > 500, stat_test, parameters_dict, pop_size = 15, cv = 10, scoring='f1_macro')
+    pop, pop_scores = irace(models, X, y, lambda x: x > 500, stat_test, parameters_dict, pop_size = 20, cv = 10, scoring='f1_macro')
 
     scores = cross_val_score(LogisticRegression(), X, y, cv=10, scoring='f1')
     print('LR')
@@ -114,4 +111,5 @@ if __name__ == '__main__':
     print()
     for i in range(len(pop)):
         print(pop[i])
-        print(f'{np.mean(pop_scores[i])} +- {np.std(pop_scores[i])}')
+        scores = cross_val_score(RandomForestClassifier(), X, y, cv=10, scoring='f1') 
+        print(f'{np.mean(scores[i])} +- {np.std(scores[i])}')
