@@ -11,17 +11,23 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 import statsmodels.stats.weightstats as stats
 import scipy.stats as ss
-from sklearn.model_selection import train_test_split,StratifiedShuffleSplit,cross_val_score
-from scipy.stats import norm, poisson, skellam
+from sklearn.model_selection import cross_val_score, permutation_test_score
 from copy import copy, deepcopy
+from sampling_functions import truncated_poisson, truncated_skellam, norm_sample
+from validation_functions import repeated_train_test
 
-def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, cv, scoring):
+def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, scoring, cv=None, r=100):
     ''' Irace finds a population of models that maximizes the score given by the scoring function.
     
     '''
     population = [deepcopy(r) for r in random.choices(models, k=pop_size)]
     generation = 0
-    pop_scores = [cross_val_score(model, X, y, cv=cv, scoring=scoring) for model in population]
+
+    if cv:
+        pop_scores = [cross_val_score(model, X, y, cv=cv, scoring=scoring) for model in population]
+    else:
+        pop_scores = [repeated_train_test(model, X, y, n=r, scoring=scoring) for model in population]
+
 
     while not stop_condition(generation):
         print(f'Gen {generation}\n')
@@ -37,7 +43,10 @@ def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, cv
                 else:
                     setattr(competitor,p,parameters[p](getattr(competitor,p)))
 
-            scores = cross_val_score(competitor, X, y, cv=cv, scoring=scoring)
+            if cv:
+                scores = cross_val_score(competitor, X, y, cv=cv, scoring=scoring)
+            else:
+                scores = repeated_train_test(competitor, X, y, n=r, scoring=scoring)
 
             t, p = stat_test(pop_scores[i], scores) #stats.ttest_rel(scores[0], scores[1])
             if p <= 0.05 and np.mean(scores) > np.mean(pop_scores[i]):  
@@ -46,22 +55,6 @@ def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, cv
         generation += 1
         print(f'Average scores: {np.mean([np.mean(scores) for scores in pop_scores])}')
     return population, pop_scores
-
-
-def norm_sample(loc, scale, min):
-    dist = norm(loc=loc, scale=scale)
-    sample = dist.rvs(1)[0] 
-    return sample if sample > min else min 
-
-def truncated_poisson(loc, mu, min):
-    #dist = poisson(mu=mu)
-    sample = poisson.rvs(mu=mu, loc=loc, size=1)[0] 
-    return sample if sample > min else min 
-
-def truncated_skellam(loc, mu1, mu2, min):
-    sample = skellam.rvs(mu1=mu1, mu2=mu2, loc=loc, size=1)[0] 
-    return sample if sample > min else min 
-
 
 
 if __name__ == '__main__':
@@ -97,7 +90,7 @@ if __name__ == '__main__':
 
     stat_test = ss.ttest_rel #stats.ttest_ind, stats.mannwhitneyu
 
-    pop, pop_scores = irace(models, X, y, lambda x: x > 500, stat_test, parameters_dict, pop_size = 20, cv = 10, scoring='f1_macro')
+    pop, pop_scores = irace(models, X, y, lambda x: x > 500, stat_test, parameters_dict, pop_size = 20, scoring='f1')
 
     scores = cross_val_score(LogisticRegression(), X, y, cv=10, scoring='f1')
     print('LR')
