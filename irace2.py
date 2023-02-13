@@ -22,12 +22,15 @@ def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, sc
     '''
     population = [deepcopy(r) for r in random.choices(models, k=pop_size)]
     generation = 0
+    
 
     if cv:
         pop_scores = [cross_val_score(model, X, y, cv=cv, scoring=scoring) for model in population]
     else:
         pop_scores = [repeated_train_test(model, X, y, n=r, scoring=scoring) for model in population]
 
+    best_model = deepcopy(population[0])
+    best_scores = deepcopy(pop_scores[0])
 
     while not stop_condition(generation):
         print(f'Gen {generation}\n')
@@ -48,13 +51,17 @@ def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, sc
             else:
                 scores = repeated_train_test(competitor, X, y, n=r, scoring=scoring)
 
-            t, p = stat_test(pop_scores[i], scores) #stats.ttest_rel(scores[0], scores[1])
+            t, p = stat_test(pop_scores[i], scores) 
             if p <= 0.05 and np.mean(scores) > np.mean(pop_scores[i]):  
                     population[i] = competitor
                     pop_scores[i] = scores
+                    t, p = stat_test(best_scores, scores) 
+                    if p <= 0.05 and np.mean(scores) > np.mean(best_scores):
+                        best_model = deepcopy(competitor)
+                        best_scores = deepcopy(scores)
         generation += 1
         print(f'Average scores: {np.mean([np.mean(scores) for scores in pop_scores])}')
-    return population, pop_scores
+    return best_model,best_scores,population,pop_scores
 
 def dummy_stats_test(a,b):
     return 0,0
