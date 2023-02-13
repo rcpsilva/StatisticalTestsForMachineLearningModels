@@ -56,6 +56,8 @@ def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, sc
         print(f'Average scores: {np.mean([np.mean(scores) for scores in pop_scores])}')
     return population, pop_scores
 
+def dummy_stats_test(a,b):
+    return 0,0
 
 if __name__ == '__main__':
 
