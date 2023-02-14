@@ -79,8 +79,6 @@ res = []
 
 for n_exp in tqdm(range(n)):
     for f in tqdm(factors):
-        print(f)
-
         data_id = f[0]
         X = Xs[data_id]
         y = ys[data_id]
