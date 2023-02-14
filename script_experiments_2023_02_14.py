@@ -68,11 +68,9 @@ stat_tests = [ ss.ttest_rel,
                 dummy_stats_test]
 
 data_set_id = [0,1,2]
-train_test_resampling = [10, 30, 100]
-cv_splits = [10, 30, 100]
-pop_size = [10, 25, 50]
-n_gen = [10, 50, 250]
-
+cv_splits = [10, 30]
+pop_size = [10, 50]
+n_gen = [100]
 
 factors = list(itertools.product(data_set_id,stat_tests,cv_splits,pop_size,n_gen))
 
@@ -81,7 +79,8 @@ res = []
 
 for n_exp in tqdm(range(n)):
     for f in tqdm(factors):
-        
+        print(f)
+
         data_id = f[0]
         X = Xs[data_id]
         y = ys[data_id]
