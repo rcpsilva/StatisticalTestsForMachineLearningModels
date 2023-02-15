@@ -101,7 +101,7 @@ for n_exp in tqdm(range(n)):
         best_model.fit(X_train,y_train)
         y_pred = best_model.predict(X_test)
 
-        row = [data_id,stat_test,split,p_size,stop,'cv',type(best_model).__name__,f1_score(y_test,y_pred)]
+        row = [data_id,stat_test.__name__,split,p_size,stop,'cv',type(best_model).__name__,f1_score(y_test,y_pred)]
         res.append(row)
 
         best_model,best_scores,population,pop_scores = irace(models, 
