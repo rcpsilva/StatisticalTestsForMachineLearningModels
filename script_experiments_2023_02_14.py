@@ -115,8 +115,9 @@ for n_exp in tqdm(range(n)):
         best_model.fit(X_train,y_train)
         y_pred = best_model.predict(X_test)
 
-        row = [data_id,stat_test,split,p_size,stop,'train_test',type(best_model).__name__,f1_score(y_test,y_pred)]
+        row = [data_id,stat_test.__name__,split,p_size,stop,'train_test',type(best_model).__name__,f1_score(y_test,y_pred)]
         res.append(row)
 
-        with open('my_data.pkl', 'wb') as f:
-            pickle.dump(res, f)
+        df = pd.DataFrame(res, columns = ['data_id', 'stat_test','n','p_size','max_iter','type','best_model','f1_score'])
+
+        df.to_csv('results_2023-02-15.csv')
