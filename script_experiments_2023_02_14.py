@@ -23,17 +23,25 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 Xs = []
 ys = []
 
-df = pd.read_csv('spect_train.csv')
-Xs.append(preprocessing.normalize(df.drop(columns=['OVERALL_DIAGNOSIS']).to_numpy()))
-ys.append(df['OVERALL_DIAGNOSIS'].to_numpy())
+#df = pd.read_csv('spect_train.csv')
+#Xs.append(preprocessing.normalize(df.drop(columns=['OVERALL_DIAGNOSIS']).to_numpy()))
+#s.append(df['OVERALL_DIAGNOSIS'].to_numpy())
 
 df = pd.read_csv('spambase.csv')
 Xs.append(preprocessing.normalize(df.drop(columns=['spam']).to_numpy()))
 ys.append(df['spam'].to_numpy())
 
-df = pd.read_csv('ionosphere_data.csv')
-Xs.append(preprocessing.normalize(df.drop(columns=['column_ai']).to_numpy()))
-ys.append(df['column_ai'].to_numpy())
+#df = pd.read_csv('ionosphere_data.csv')
+#Xs.append(preprocessing.normalize(df.drop(columns=['column_ai']).to_numpy()))
+#ys.append(df['column_ai'].to_numpy())
+
+df = pd.read_csv('heart.csv')
+Xs.append(preprocessing.normalize(df.drop(columns=['target']).to_numpy()))
+ys.append(df['target'].to_numpy())
+
+df = pd.read_csv('UCI_Credit_Card.csv')
+Xs.append(preprocessing.normalize(df.drop(columns=['ID','default.payment.next.month']).to_numpy()))
+ys.append(df['default.payment.next.month'].to_numpy())
 
 #all the numeric parameters being configured must be set beforehand
 models = [LogisticRegression(C=1), 
@@ -67,7 +75,7 @@ stat_tests = [ ss.ttest_rel,
                 ss.wilcoxon,
                 dummy_stats_test]
 
-data_set_id = [0,1,2]
+data_set_id = np.arange(len(ys))
 cv_splits = [10, 30]
 pop_size = [10, 50]
 n_gen = [100]
