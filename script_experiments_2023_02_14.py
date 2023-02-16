@@ -3,7 +3,6 @@ from irace2 import irace, dummy_stats_test
 import itertools
 import numpy as np
 from sampling_functions import norm_sample, truncated_poisson, truncated_skellam
-import scipy.stats as stats
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, train_test_split,StratifiedShuffleSplit,cross_val_score
 from sklearn import preprocessing
 from sklearn.linear_model import LogisticRegression
@@ -19,6 +18,11 @@ from xgboost import XGBRegressor, XGBClassifier
 import pickle
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
+import sys
+
+# Get the string parameter from the command-line argument
+results_file = sys.argv[1]
+
 
 Xs = []
 ys = []
@@ -128,4 +132,4 @@ for n_exp in tqdm(range(n)):
 
         df = pd.DataFrame(res, columns = ['data_id', 'stat_test','n','p_size','max_iter','type','best_model','f1_score'])
 
-        df.to_csv('results_2023-02-15.csv')
+        df.to_csv(results_file)
