@@ -82,7 +82,7 @@ stat_tests = [ ss.ttest_rel,
 data_set_id = np.arange(len(ys))
 cv_splits = [10, 30]
 pop_size = [10, 50]
-n_gen = [100]
+n_gen = [20]
 
 factors = list(itertools.product(data_set_id,stat_tests,cv_splits,pop_size,n_gen))
 
