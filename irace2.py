@@ -16,7 +16,7 @@ from copy import copy, deepcopy
 from sampling_functions import truncated_poisson, truncated_skellam, norm_sample
 from validation_functions import repeated_train_test
 
-def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, scoring, cv=None, r=100):
+def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, scoring, cv=None, r=100, show_gen=False):
     ''' Irace finds a population of models that maximizes the score given by the scoring function.
     
     '''
@@ -32,7 +32,8 @@ def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, sc
     best_scores = deepcopy(pop_scores[0])
 
     while not stop_condition(generation):
-        print(f'Gen {generation}\n')
+        if show_gen:
+            print(f'Gen {generation}\n')
         for i in range(len(population)):
             # Select competitor
             competitor = deepcopy(random.sample(population, 1)[0])
@@ -59,7 +60,8 @@ def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, sc
                         best_model = deepcopy(competitor)
                         best_scores = deepcopy(scores)
         generation += 1
-        print(f'Average scores: {np.mean([np.mean(scores) for scores in pop_scores])}')
+        if show_gen:
+            print(f'Average scores: {np.mean([np.mean(scores) for scores in pop_scores])}')
     return best_model,best_scores,population,pop_scores
 
 def dummy_stats_test(a,b):
