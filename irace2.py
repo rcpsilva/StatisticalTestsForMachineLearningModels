@@ -1,15 +1,15 @@
 import numpy as np
 import random
 import scipy.stats as stats
-import xgboost as xgb
+#import xgboost as xgb
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from tqdm import tqdm
 from sklearn import preprocessing
 import pandas as pd
-from xgboost import XGBRegressor, XGBClassifier
+#from xgboost import XGBRegressor, XGBClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-import statsmodels.stats.weightstats as stats
+#import statsmodels.stats.weightstats as stats
 import scipy.stats as ss
 from sklearn.model_selection import cross_val_score, permutation_test_score
 from copy import copy, deepcopy
@@ -17,11 +17,14 @@ from sampling_functions import truncated_poisson, truncated_skellam, norm_sample
 from validation_functions import repeated_train_test
 
 
-def irace2(models, X, y, stop_condition, stat_test, parameters_dict, scoring, 
+def irace2(models, X, y, max_iter, stat_test, parameters_dict, scoring, 
            cv=None, r=100, show_gen=False, p_value=0.05):
     ''' Irace finds a population of models that maximizes the score given by the scoring function.
     
     '''
+    scores_evolution = np.zeros(max_iter)
+    best_evolution = np.zeros(max_iter)
+    
     # create an empty dictionary to hold the population. 
     # the population stores the best hyperparameter found for each model
     population = {}
@@ -52,7 +55,7 @@ def irace2(models, X, y, stop_condition, stat_test, parameters_dict, scoring,
 
     initial_scores = copy(pop_scores)
 
-    while not stop_condition(generation):
+    while generation < max_iter:
         if show_gen:
             print(f'Gen {generation}\n')
 
@@ -99,7 +102,11 @@ def irace2(models, X, y, stop_condition, stat_test, parameters_dict, scoring,
         if show_gen:
             print(f'Average scores: {np.mean([np.mean(pop_scores[model]) for model in pop_scores]):.4f}')
             print(f'Best average score: {np.mean(best_scores):.4f}')
-    return best_model,best_scores,population,pop_scores,initial_scores,initial_best
+        
+        scores_evolution[generation] = np.mean([np.mean(pop_scores[model]) for model in pop_scores])
+        best_evolution[generation] = np.mean(best_scores)
+
+    return best_model,best_scores,population,pop_scores,initial_scores,initial_best,scores_evolution,best_evolution
 
 def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, scoring, cv=None, r=100, show_gen=False):
     ''' Irace finds a population of models that maximizes the score given by the scoring function.
@@ -158,6 +165,7 @@ if __name__ == '__main__':
     from sklearn.svm import SVC
     from sklearn.neighbors import KNeighborsClassifier
     from sklearn.tree import DecisionTreeClassifier
+    import matplotlib.pyplot as plt
     import warnings
     warnings.filterwarnings("ignore")
 
@@ -208,10 +216,10 @@ if __name__ == '__main__':
 
     stat_test = ss.ttest_rel #stats.ttest_ind, stats.mannwhitneyu
 
-    best_model,best_scores,population,pop_scores,initial_scores,initial_best = irace2(models, 
+    best_model,best_scores,population,pop_scores,initial_scores,initial_best,scores_evolution,best_evolution = irace2(models, 
                                                                          X, 
                                                                          y, 
-                                                                         lambda x: x > 500, 
+                                                                         20, 
                                                                          stat_test, 
                                                                          parameters_dict, 
                                                                          scoring='f1',
@@ -226,4 +234,9 @@ if __name__ == '__main__':
     print(f'Best: {np.mean(best_scores):.4f}')
     print(f'Initial: {initial_scores:.4f}')
     print(f'Final: {avg_scores:.4f}')
+
+    plt.plot(scores_evolution)
+    plt.plot(best_evolution)
+
+    plt.show()
     
