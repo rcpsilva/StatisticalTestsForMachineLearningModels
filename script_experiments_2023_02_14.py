@@ -22,6 +22,7 @@ import sys
 
 # Get the string parameter from the command-line argument
 results_file = sys.argv[1]
+show_gen = True
 
 
 Xs = []
@@ -67,7 +68,7 @@ parameters_dict = {
                                 'max_features':['sqrt', 'log2', None],
                                 'ccp_alpha':lambda loc : norm_sample(loc=loc, scale=0.1, min= 1e-3)
                                 },
-    'XGBClassifier': {'sample_type': ['uniform','weighted'], 
+    'XGBClassifier': {'tree_method': ['auto','exact','approx'], 
                         'max_depth': lambda loc: truncated_skellam(loc, mu1=1, mu2=1, min=1),
                         'booster':['gbtree','dart'],
                         'subsample':lambda loc : norm_sample(loc=loc, scale=0.3, min= 1e-2,max=1)}
@@ -108,7 +109,8 @@ for n_exp in tqdm(range(n)):
                 lambda x: x > stop, 
                 stat_test, 
                 parameters_dict, 
-                p_size, 'f1', cv=split)
+                p_size, 'f1', cv=split,
+                show_gen = show_gen)
 
         best_model.fit(X_train,y_train)
         y_pred = best_model.predict(X_test)
@@ -122,7 +124,8 @@ for n_exp in tqdm(range(n)):
                 lambda x: x > f[4], 
                 stat_test, 
                 parameters_dict, 
-                p_size, 'f1', r=split)
+                p_size, 'f1', r=split,
+                show_gen = show_gen)
 
         best_model.fit(X_train,y_train)
         y_pred = best_model.predict(X_test)
