@@ -20,10 +20,22 @@ import pandas as pd
 import pickle
 import sys
 import warnings
+import json
+from json import JSONEncoder
 warnings.filterwarnings("ignore")
 
 # Get the string parameter from the command-line argument
-results_file = sys.argv[1]
+csv_file = sys.argv[1]
+json_file = sys.argv[2]
+
+
+class NumpyArrayEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return JSONEncoder.default(self, obj)
+
+
 show_gen = False
 
 Xs = []
@@ -86,29 +98,41 @@ parameters_dict = {
 stat_tests = [ ss.ttest_rel,
                 ss.ttest_ind,
                 ss.mannwhitneyu,
-                ss.wilcoxon,
                 dummy_stats_test]
 
 data_set_id = np.arange(len(ys))
 cv_splits = [10, 30, 50]
-n_gen = [100]
+n_gen = [10]
 
-factors = list(itertools.product(data_set_id,stat_tests,cv_splits,n_gen))
+factors = list(itertools.product(n_gen,cv_splits,data_set_id,stat_tests))
 
 n = 10
 res = []
 
+exp_info = {'data_id':0,
+            'stat_test':'',
+            'split':0,
+            'stop':0,
+            'type_partition':'',
+            'best_model_name':'',
+            'test_score':'0',
+            'scores_evolution':[],
+            'best_evolution':[]}
+
+exp_list = [copy(exp_info) for i in range(n*len(factors))] 
+exp_number = 0
+
 for n_exp in tqdm(range(n)):
     for f in tqdm(factors):
-        data_id = f[0]
+        data_id = f[2]
         X = Xs[data_id]
         y = ys[data_id]
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
 
-        stat_test = f[1]
-        split = f[2]
-        stop = f[3]
+        stat_test = f[3]
+        split = f[1]
+        stop = f[0]
 
         best_model,best_model_name,best_scores,population,pop_scores,initial_scores,initial_best,scores_evolution,best_evolution = irace2(models, 
                                                                          X_train, 
@@ -129,6 +153,17 @@ for n_exp in tqdm(range(n)):
         final_best = np.mean(best_scores)
         initial = initial_scores
         final = avg_scores
+
+        exp_list[exp_number]['data_id'] = int(data_id)
+        exp_list[exp_number]['stat_test'] = stat_test.__name__
+        exp_list[exp_number]['split'] = int(split)
+        exp_list[exp_number]['iter_max'] = int(stop)
+        exp_list[exp_number]['type_partition'] = 'cv'
+        exp_list[exp_number]['best_model_name'] = type(best_model).__name__
+        exp_list[exp_number]['test_score'] = f1_score(y_test,y_pred)
+        exp_list[exp_number]['best_evolution'] = best_evolution
+        exp_list[exp_number]['scores_evolution'] = scores_evolution 
+        exp_number+=1
 
         row = [data_id,stat_test.__name__,split,stop,'cv',type(best_model).__name__,f1_score(y_test,y_pred),ini_best,final_best,initial,final]
         res.append(row)
@@ -154,9 +189,23 @@ for n_exp in tqdm(range(n)):
         initial = initial_scores
         final = avg_scores
 
+        exp_list[exp_number]['data_id'] = int(data_id)
+        exp_list[exp_number]['stat_test'] = stat_test.__name__
+        exp_list[exp_number]['split'] = int(split)
+        exp_list[exp_number]['iter_max'] = int(stop)
+        exp_list[exp_number]['type_partition'] = 'tt'
+        exp_list[exp_number]['best_model_name'] = type(best_model).__name__
+        exp_list[exp_number]['test_score'] = f1_score(y_test,y_pred)
+        exp_list[exp_number]['best_evolution'] = best_evolution
+        exp_list[exp_number]['scores_evolution'] = scores_evolution 
+        exp_number+=1
+
         row = [data_id,stat_test.__name__,split,stop,'tt',type(best_model).__name__,f1_score(y_test,y_pred),ini_best,final_best,initial,final]
         res.append(row)
 
         df = pd.DataFrame(res, columns = ['data_id','stat_test','n','max_iter','type','best_model','f1_score','ini_best','final_best','initial','final'])
 
-        df.to_csv(results_file)
+        df.to_csv(csv_file)
+
+        with open(json_file, "w") as final:
+            json.dump(exp_list, final, cls=NumpyArrayEncoder)
