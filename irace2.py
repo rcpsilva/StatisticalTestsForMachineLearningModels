@@ -6,7 +6,8 @@ from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from tqdm import tqdm
 from sklearn import preprocessing
 import pandas as pd
-#from xgboost import XGBRegressor, XGBClassifier
+from xgboost import XGBClassifier
+from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 #import statsmodels.stats.weightstats as stats
@@ -73,6 +74,8 @@ def irace2(models, X, y, max_iter, stat_test, parameters_dict, scoring,
             else:
                 setattr(competitor,p,parameter_list[p](parameters[p]))
 
+        #print(competitor)
+
         # Compute scores
         if cv:
             scores = cross_val_score(competitor, X, y, cv=cv, scoring=scoring)
@@ -98,7 +101,7 @@ def irace2(models, X, y, max_iter, stat_test, parameters_dict, scoring,
                 if p <= p_value and np.mean(scores) > np.mean(best_scores):
                     best_model = type(competitor).__name__
                     best_scores = copy(scores)
-        generation += 1
+        
         if show_gen:
             print(f'Average scores: {np.mean([np.mean(pop_scores[model]) for model in pop_scores]):.4f}')
             print(f'Best average score: {np.mean(best_scores):.4f}')
@@ -106,7 +109,18 @@ def irace2(models, X, y, max_iter, stat_test, parameters_dict, scoring,
         scores_evolution[generation] = np.mean([np.mean(pop_scores[model]) for model in pop_scores])
         best_evolution[generation] = np.mean(best_scores)
 
-    return best_model,best_scores,population,pop_scores,initial_scores,initial_best,scores_evolution,best_evolution
+        generation += 1
+
+    for m in models:
+        if type(m).__name__ == best_model:
+            use_model = copy(m)
+
+            for p in population[best_model]:
+                setattr(use_model,p,population[best_model][p])
+            
+            break
+                
+    return use_model,best_model,best_scores,population,pop_scores,initial_scores,initial_best,scores_evolution,best_evolution
 
 def irace(models, X, y, stop_condition, stat_test, parameters_dict, pop_size, scoring, cv=None, r=100, show_gen=False):
     ''' Irace finds a population of models that maximizes the score given by the scoring function.
@@ -175,22 +189,22 @@ if __name__ == '__main__':
     y = (df['default.payment.next.month'].to_numpy())
 
     #all the parameters being configures must be set beforehand
-    models = [LogisticRegression(C=1), 
-        #RandomForestClassifier(n_estimators=100,max_depth=5),
-        KNeighborsClassifier(n_neighbors=5),
-        DecisionTreeClassifier(max_depth=5)
-        #SVC(C=1,coef0=0.0),
-        #XGBClassifier(n_estimators=100,max_depth=6,subsample=1)
+    models = [#LogisticRegression(C=1,solver='sag'), 
+        #RandomForestClassifier(n_estimators=10,max_depth=1,max_features=None),
+        KNeighborsClassifier(n_neighbors=3,weights='uniform'),
+        DecisionTreeClassifier(max_depth=8,max_features=None,criterion='log_loss'),
+        #SVC(C=1,coef0=0.0,decision_function_shape='ovo',kernel='linear'),
+        XGBClassifier(n_estimators=1,max_depth=6,subsample=1)
         ]
    
 
     parameters_dict = {
-        'LogisticRegression': {'C': lambda loc : norm_sample(loc=loc, scale=2, min= 1e-2),
-                                'penalty':['l2'],
-                                'solver':['lbfgs','newton-cg','sag']},
-        'KNeighborsClassifier':{'n_neighbors':lambda loc: truncated_skellam(loc, mu1=2, mu2=2, min=3),
+        #'LogisticRegression': {'C': lambda loc : norm_sample(loc=loc, scale=1, min= 1e-2),
+        #                        'penalty':['l2'],
+        #                        'solver':['lbfgs','newton-cg','sag']},
+        'KNeighborsClassifier':{'n_neighbors':lambda loc: truncated_skellam(loc, mu1=1, mu2=1, min=3),
                                 'weights':['uniform', 'distance']},
-        'DecisionTreeClassifier':{'max_depth':lambda loc: truncated_skellam(loc, mu1=2, mu2=2, min=2),
+        'DecisionTreeClassifier':{'max_depth':lambda loc: truncated_skellam(loc, mu1=1, mu2=1, min=2),
                                   'max_features':['sqrt','log2',None],
                                   'criterion':['gini','entropy','log_loss']},                        
         #'SVC':{'C':lambda loc : norm_sample(loc=loc, scale=1, min= 1e-2),
@@ -201,10 +215,11 @@ if __name__ == '__main__':
         #                            'max_depth': lambda loc: truncated_skellam(loc, mu1=2, mu2=2, min=2),
         #                            'max_features':['sqrt', 'log2', None]
         #                            },
-        #'XGBClassifier': {'tree_method': ['auto','exact','approx'], 
-        #                    'max_depth': lambda loc: truncated_skellam(loc, mu1=1, mu2=1, min=1),
-        #                    'booster':['gbtree','dart'],
-        #                    'subsample':lambda loc : norm_sample(loc=loc, scale=0.3, min= 1e-2,max=1)}
+        'XGBClassifier': {'tree_method': ['auto','exact','approx'], 
+                            'max_depth': lambda loc: truncated_skellam(loc, mu1=1, mu2=1, min=1),
+                            'booster':['gbtree','dart'],
+                            'n_estimators': lambda loc: truncated_skellam(loc, mu1=1, mu2=1, min=1),
+                            'subsample':lambda loc : norm_sample(loc=loc, scale=0.3, min= 1e-2,max=1)}
     }
 
     # Possible tests
@@ -216,14 +231,14 @@ if __name__ == '__main__':
 
     stat_test = ss.ttest_rel #stats.ttest_ind, stats.mannwhitneyu
 
-    best_model,best_scores,population,pop_scores,initial_scores,initial_best,scores_evolution,best_evolution = irace2(models, 
+    use_model,best_model,best_scores,population,pop_scores,initial_scores,initial_best,scores_evolution,best_evolution = irace2(models, 
                                                                          X, 
                                                                          y, 
-                                                                         20, 
+                                                                         50, 
                                                                          stat_test, 
                                                                          parameters_dict, 
                                                                          scoring='f1',
-                                                                         r=50,
+                                                                         cv=10,
                                                                          show_gen=True)
 
     
@@ -235,8 +250,19 @@ if __name__ == '__main__':
     print(f'Initial: {initial_scores:.4f}')
     print(f'Final: {avg_scores:.4f}')
 
+    for p in population:
+        print(population[p])
+
+    print(type(use_model).__name__)
+    print(use_model)
+    scores = cross_val_score(use_model, X, y, cv=10, scoring='f1')
+    print(np.mean(scores))
+
+
     plt.plot(scores_evolution)
     plt.plot(best_evolution)
 
     plt.show()
+
+
     
