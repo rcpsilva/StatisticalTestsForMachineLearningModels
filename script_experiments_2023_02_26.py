@@ -119,7 +119,8 @@ exp_info = {'data_id':0,
             'scores_evolution':[],
             'best_evolution':[]}
 
-exp_list = [copy(exp_info) for i in range(n*len(factors))] 
+exp_list = [copy(exp_info) for i in range(n*len(factors)*2)] 
+
 exp_number = 0
 
 for n_exp in tqdm(range(n)):
@@ -165,7 +166,7 @@ for n_exp in tqdm(range(n)):
         exp_list[exp_number]['scores_evolution'] = scores_evolution 
         exp_number+=1
 
-        row = [data_id,stat_test.__name__,split,stop,'cv',type(best_model).__name__,f1_score(y_test,y_pred),ini_best,final_best,initial,final]
+        row = [n_exp,data_id,stat_test.__name__,split,stop,'cv',type(best_model).__name__,f1_score(y_test,y_pred),ini_best,final_best,initial,final]
         res.append(row)
 
         best_model,best_model_name,best_scores,population,pop_scores,initial_scores,initial_best,scores_evolution,best_evolution = irace2(models, 
@@ -200,10 +201,10 @@ for n_exp in tqdm(range(n)):
         exp_list[exp_number]['scores_evolution'] = scores_evolution 
         exp_number+=1
 
-        row = [data_id,stat_test.__name__,split,stop,'tt',type(best_model).__name__,f1_score(y_test,y_pred),ini_best,final_best,initial,final]
+        row = [n_exp,data_id,stat_test.__name__,split,stop,'tt',type(best_model).__name__,f1_score(y_test,y_pred),ini_best,final_best,initial,final]
         res.append(row)
 
-        df = pd.DataFrame(res, columns = ['data_id','stat_test','n','max_iter','type','best_model','f1_score','ini_best','final_best','initial','final'])
+        df = pd.DataFrame(res, columns = ['n_exp','data_id','stat_test','n','max_iter','type','best_model','f1_score','ini_best','final_best','initial','final'])
 
         df.to_csv(csv_file)
 
