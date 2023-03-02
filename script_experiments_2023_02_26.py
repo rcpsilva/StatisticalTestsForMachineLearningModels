@@ -1,3 +1,5 @@
+# nohup python script_experiments_2023_02_26.py "cisco_res_2023_03_02.csv" "cisco_res_2023_03_02.json" > output_cisco_2023_03_03.log &      
+
 from copy import copy, deepcopy
 from irace2 import irace2, dummy_stats_test
 import itertools
