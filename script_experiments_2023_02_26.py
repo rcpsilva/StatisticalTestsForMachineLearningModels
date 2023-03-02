@@ -69,7 +69,7 @@ ys.append(df['default.payment.next.month'].to_numpy())
 
 #all the parameters being configures must be set beforehand
 models = [#LogisticRegression(C=1,solver='sag'), 
-        #RandomForestClassifier(n_estimators=10,max_depth=1,max_features=None),
+        RandomForestClassifier(n_estimators=3,max_depth=1,max_features=None),
         KNeighborsClassifier(n_neighbors=3,weights='uniform'),
         DecisionTreeClassifier(max_depth=8,max_features=None,criterion='log_loss'),
         #SVC(C=1,coef0=0.0,decision_function_shape='ovo',kernel='linear'),
@@ -90,10 +90,10 @@ parameters_dict = {
         #        'coef0': lambda loc : norm_sample(loc=loc, scale=1, min= 1e-2),
         #        'kernel':['linear','poly','rbf','sigmoid'],
         #        'decision_function_shape':['ovo','ovr']},
-        #'RandomForestClassifier': {'n_estimators': lambda loc: truncated_skellam(loc, mu1=10, mu2=10, min=3), 
-        #                            'max_depth': lambda loc: truncated_skellam(loc, mu1=2, mu2=2, min=2),
-        #                            'max_features':['sqrt', 'log2', None]
-        #                            },
+        'RandomForestClassifier': {'n_estimators': lambda loc: truncated_skellam(loc, mu1=10, mu2=10, min=3), 
+                                    'max_depth': lambda loc: truncated_skellam(loc, mu1=2, mu2=2, min=2),
+                                    'max_features':['sqrt', 'log2', None]
+                                    },
         'XGBClassifier': {'tree_method': ['auto','exact','approx'], 
                             'max_depth': lambda loc: truncated_skellam(loc, mu1=1, mu2=1, min=1),
                             'booster':['gbtree','dart'],
@@ -108,7 +108,7 @@ stat_tests = [ ss.ttest_rel,
 
 data_set_id = np.arange(len(ys))
 cv_splits = [10, 30, 50]
-n_gen = [25,100]
+n_gen = [25,100,1000]
 
 factors = list(itertools.product(n_gen,cv_splits,data_set_id,stat_tests))
 
