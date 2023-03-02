@@ -12,6 +12,7 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.preprocessing import LabelEncoder
 import scipy.stats as ss
 from scipy.stats import norm, poisson, skellam
 from xgboost import XGBClassifier
@@ -41,17 +42,22 @@ show_gen = False
 Xs = []
 ys = []
 
-#df = pd.read_csv('spect_train.csv')
-#Xs.append(preprocessing.normalize(df.drop(columns=['OVERALL_DIAGNOSIS']).to_numpy()))
-#s.append(df['OVERALL_DIAGNOSIS'].to_numpy())
+encoder = LabelEncoder()
+
+df = pd.read_csv('bank.csv')
+categorical = ['job','marital','education','default','housing','loan','contact','month','poutcome','deposit']
+for c in categorical:
+    df[c] = encoder.fit_transform(df[c])
+Xs.append(preprocessing.normalize(df.drop(columns=['deposit']).to_numpy()))
+ys.append(df['deposit'].to_numpy())
+
+df = pd.read_csv('heart.csv')
+Xs.append(preprocessing.normalize(df.drop(columns=['target']).to_numpy()))
+ys.append(df['target'].to_numpy())
 
 df = pd.read_csv('spambase.csv')
 Xs.append(preprocessing.normalize(df.drop(columns=['spam']).to_numpy()))
 ys.append(df['spam'].to_numpy())
-
-#df = pd.read_csv('ionosphere_data.csv')
-#Xs.append(preprocessing.normalize(df.drop(columns=['column_ai']).to_numpy()))
-#ys.append(df['column_ai'].to_numpy())
 
 df = pd.read_csv('heart.csv')
 Xs.append(preprocessing.normalize(df.drop(columns=['target']).to_numpy()))
